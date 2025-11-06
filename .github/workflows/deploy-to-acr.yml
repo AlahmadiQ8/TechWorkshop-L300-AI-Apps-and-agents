@@ -1,0 +1,41 @@
+# This workflow builds and deploys the application in the src/ folder to Azure Container Registry
+# 
+# Required GitHub Secrets:
+# - ACR_REGISTRY: The Azure Container Registry URL (e.g., myregistry.azurecr.io)
+# - ACR_USERNAME: The Azure Container Registry username
+# - ACR_PASSWORD: The Azure Container Registry password
+# - ENV: The contents of the .env file (will be created inside the container during build)
+#
+name: Deploy to Azure Container Registry
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src
+          file: ./src/Dockerfile
+          push: true
+          tags: ${{ secrets.ACR_REGISTRY }}/techworkshop-app:${{ github.sha }},${{ secrets.ACR_REGISTRY }}/techworkshop-app:latest
+          build-args: |
+            ENV_CONTENT=${{ secrets.ENV }}
